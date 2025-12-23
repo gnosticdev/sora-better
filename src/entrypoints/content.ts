@@ -1,6 +1,19 @@
 import { getFlags } from '@/storage';
 
-export type FixVideosMessage = { type: 'FIX_VIDEOS' };
+export type FixVideosMessage = { type: 'FIX_VIDEOS' } | { type: 'GET_VIDEOS' };
+
+/**
+ * Video details type for popup display
+ */
+export type VideoDetails = {
+  src: string;
+  poster?: string;
+  duration: number;
+  width: number;
+  height: number;
+  currentTime: number;
+  index: number;
+};
 
 /**
  * Apply video fixes based on flags from storage
@@ -70,6 +83,48 @@ async function fixVideos() {
   return { count: vids.length };
 }
 
+/**
+ * Get details of all videos on the page
+ * Collects source URL, dimensions, duration, and other metadata
+ */
+function getVideoDetails(): { videos: VideoDetails[] } {
+  const vids = Array.from(document.querySelectorAll('video'));
+  const videos: VideoDetails[] = [];
+
+  vids.forEach((v, index) => {
+    try {
+      const video = v as HTMLVideoElement;
+      // Try multiple methods to get the video source
+      let src = video.src || video.currentSrc || '';
+
+      // If no direct src, check for <source> elements
+      if (!src) {
+        const source = video.querySelector('source');
+        if (source) {
+          src = source.src || '';
+        }
+      }
+
+      // Skip if no valid source
+      if (!src) return;
+
+      videos.push({
+        src,
+        poster: video.poster || undefined,
+        duration: video.duration || 0,
+        width: video.videoWidth || video.clientWidth || 0,
+        height: video.videoHeight || video.clientHeight || 0,
+        currentTime: video.currentTime || 0,
+        index,
+      });
+    } catch {
+      // ignore per-element failures
+    }
+  });
+
+  return { videos };
+}
+
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
@@ -81,6 +136,8 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((msg: FixVideosMessage, _sender, sendResponse) => {
       if (msg?.type === 'FIX_VIDEOS') {
         sendResponse(fixVideos());
+      } else if (msg?.type === 'GET_VIDEOS') {
+        sendResponse(getVideoDetails());
       }
     });
   },
