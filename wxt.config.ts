@@ -1,21 +1,31 @@
-import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'wxt'
 
 export default defineConfig({
-  webExt: {
-    binaries: {
-      chrome: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'
-    },
-  },
-  debug: true,
-  modules: ['@wxt-dev/module-solid'],
-  manifest: {
-    name: 'Sora Better',
-    permissions: ['tabs', 'storage'],
-  },
-  srcDir: 'src',
-  vite: () => ({
-    plugins: [tailwindcss()],
-  }),
-
-});
+	webExt: {
+		binaries: {
+			chrome: '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+		},
+		startUrls: ['https://sora.chatgpt.com'],
+		chromiumProfile:
+			'/Users/divinelight/Library/Application Support/BraveSoftware/Brave-Browser/Default',
+		chromiumArgs: [
+			'--user-data-dir=~/Library/Application Support/BraveSoftware/Brave-Browser/',
+		],
+		disabled: true,
+	},
+	debug: true,
+	modules: ['@wxt-dev/module-solid'],
+	manifest: {
+		name:
+			process.env.NODE_ENV === 'development'
+				? 'Sora Better Dev'
+				: 'Sora Better',
+		permissions: ['tabs', 'storage'],
+		host_permissions: ['https://api.kie.ai/*'],
+	},
+	srcDir: 'src',
+	vite: () => ({
+		plugins: [tailwindcss()],
+	}),
+})
