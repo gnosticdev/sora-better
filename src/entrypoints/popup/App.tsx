@@ -4,12 +4,20 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { VideoItem } from '@/components/video-item'
 import type { VideoFlags } from '@/lib/shared'
-import { defaultFlags, getApiKey, getFlags, setApiKey, toggleFlag as toggleFlagStorage } from '@/storage'
-import type { FixVideosMessage, VideoDetails } from '../content'
+import {
+  defaultFlags,
+  getApiKey,
+  getFlags,
+  setApiKey,
+  toggleFlag as toggleFlagStorage,
+} from '@/storage'
+import type { FixVideosMessage, VideoDetails } from '@/lib/messages'
 
 export default function App() {
-  const [flags, { refetch }] = createResource<VideoFlags>(async () => await getFlags(), {
+  const [flags, { refetch }] = createResource<VideoFlags>(getFlags, {
+    deferStream: true,
     initialValue: defaultFlags,
+    name: 'flags',
   })
   const [videos, setVideos] = createSignal<VideoDetails[]>([])
   const [loadingVideos, setLoadingVideos] = createSignal(false)
@@ -211,7 +219,7 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
+          Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
           model: 'sora-watermark-remover',
@@ -228,13 +236,15 @@ export default function App() {
       }
 
       const result = await response.json()
-      console.log('Watermark removal job created:', result)
-      
+      import.meta.env.DEV && console.log('Watermark removal job created:', result)
+
       // Show success message
       alert(`Watermark removal job created successfully! Job ID: ${result.job_id || 'N/A'}`)
     } catch (error) {
       console.error('Failed to remove watermark:', error)
-      alert(`Failed to remove watermark: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      alert(
+        `Failed to remove watermark: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     } finally {
       setRemovingWatermark(null)
     }
@@ -254,124 +264,120 @@ export default function App() {
         }}
       >
         <section class='p-8 flex flex-col'>
-        <div class='flex items-center justify-between mb-2'>
-          <h1 class='text-lg font-bold'>Sora Better</h1>
-          <Button
-            onClick={() => setShowApiKeySettings(!showApiKeySettings())}
-            size='sm'
-            variant='outline'
-          >
-            {showApiKeySettings() ? 'Hide' : 'API Key'}
-          </Button>
-        </div>
-
-        <Show when={showApiKeySettings()}>
-          <div class='mb-4 p-3 border rounded-lg bg-accent/30'>
-            <label
-              for='api-key-input'
-              class='text-sm font-medium mb-2 block'
-            >
-              Kie.ai API Key
-            </label>
-            <div class='flex gap-2'>
-              <input
-                id='api-key-input'
-                type='password'
-                value={apiKeyInput()}
-                onInput={(e) => setApiKeyInput(e.currentTarget.value)}
-                placeholder='Enter your API key'
-                class='flex-1 px-3 py-2 text-sm border rounded-md bg-background'
-              />
-              <Button
-                onClick={saveApiKey}
-                size='sm'
-                variant='default'
-              >
-                Save
-              </Button>
-            </div>
-            <p class='text-xs text-muted-foreground mt-2'>
-              Your API key is stored locally and used for watermark removal.
-            </p>
-          </div>
-        </Show>
-
-        <div class='flex flex-col gap-3 mt-4'>
-          <For each={Object.entries(flags())}>
-            {(entry) => (
-              <Flag
-                key={entry[0] as keyof VideoFlags}
-                flag={entry[1]}
-                toggle={() => toggleFlag(entry[0] as keyof VideoFlags)}
-              />
-            )}
-          </For>
-        </div>
-        <Button
-          onClick={run}
-          class='w-full mt-4'
-        >
-          Fix videos on this tab
-        </Button>
-        <div
-          id='status'
-          class='mt-2 text-sm'
-        />
-
-        <div class='mt-6 border-t pt-4 flex-1 flex flex-col min-h-0'>
-          <div class='flex items-center justify-between mb-3 shrink-0'>
-            <h2 class='text-base font-semibold'>Videos on Page</h2>
+          <div class='flex items-center justify-between mb-2'>
+            <h1 class='text-lg font-bold'>
+              {import.meta.env.DEV ? 'Sora Better (Dev)' : 'Sora Better'}
+            </h1>
             <Button
-              onClick={fetchVideos}
+              onClick={() => setShowApiKeySettings(!showApiKeySettings())}
               size='sm'
               variant='outline'
-              disabled={loadingVideos()}
             >
-              {loadingVideos() ? 'Loading...' : 'Refresh'}
+              {showApiKeySettings() ? 'Hide' : 'API Key'}
             </Button>
           </div>
 
-          <Show
-            when={videos().length > 0}
-            fallback={
-              <p class='text-sm text-muted-foreground text-center py-4'>
-                No videos found. Click "Refresh" to scan the page.
-              </p>
-            }
-          >
-            <div class='flex flex-col gap-2 flex-1 min-h-0'>
-              <Show when={selectedVideos().size > 0}>
-                <div class='flex items-center justify-between mb-2 p-2 bg-accent/50 rounded-lg shrink-0'>
-                  <span class='text-sm font-medium'>
-                    {selectedVideos().size} video{selectedVideos().size !== 1 ? 's' : ''} selected
-                  </span>
-                  <div class='flex gap-2'>
-                    <Button
-                      onClick={async () => {
-                        setSelectedVideos(new Set<number>())
-                        await clearHighlights()
-                      }}
-                      size='sm'
-                      variant='ghost'
-                    >
-                      Clear
-                    </Button>
-                    <Button
-                      onClick={downloadSelectedVideos}
-                      size='sm'
-                      variant='default'
-                    >
-                      Download Selected
-                    </Button>
-                  </div>
-                </div>
-              </Show>
-              <ScrollArea
-                class='flex-1'
-                style={{
-                  '--scrollbar-width': '6px',
-                }}
+          <Show when={showApiKeySettings()}>
+            <div class='mb-4 p-3 border rounded-lg bg-accent/30'>
+              <label
+                for='api-key-input'
+                class='text-sm font-medium mb-2 block'
               >
+                Kie.ai API Key
+              </label>
+              <div class='flex gap-2'>
+                <input
+                  id='api-key-input'
+                  type='password'
+                  value={apiKeyInput()}
+                  onInput={(e) => setApiKeyInput(e.currentTarget.value)}
+                  placeholder='Enter your API key'
+                  class='flex-1 px-3 py-2 text-sm border rounded-md bg-background'
+                />
+                <Button
+                  onClick={saveApiKey}
+                  size='sm'
+                  variant='default'
+                >
+                  Save
+                </Button>
+              </div>
+              <p class='text-xs text-muted-foreground mt-2'>
+                Your API key is stored locally and used for watermark removal.
+              </p>
+            </div>
+          </Show>
+
+          <div class='flex flex-col gap-3 mt-4'>
+            <For each={Object.entries(flags())}>
+              {(entry) => (
+                <Flag
+                  key={entry[0] as keyof VideoFlags}
+                  flag={entry[1]}
+                  toggle={() => toggleFlag(entry[0] as keyof VideoFlags)}
+                />
+              )}
+            </For>
+          </div>
+          <Button
+            onClick={run}
+            class='w-full mt-4'
+          >
+            Fix videos on this tab
+          </Button>
+          <div
+            id='status'
+            class='mt-2 text-sm'
+          />
+
+          <div class='mt-6 border-t pt-4 flex flex-col'>
+            <div class='flex items-center justify-between mb-3 shrink-0'>
+              <h2 class='text-base font-semibold'>Videos on Page</h2>
+              <Button
+                onClick={fetchVideos}
+                size='sm'
+                variant='outline'
+                disabled={loadingVideos()}
+              >
+                {loadingVideos() ? 'Loading...' : 'Refresh'}
+              </Button>
+            </div>
+
+            <Show
+              when={videos().length > 0}
+              fallback={
+                <p class='text-sm text-muted-foreground text-center py-4'>
+                  No videos found. Click "Refresh" to scan the page.
+                </p>
+              }
+            >
+              <div class='flex flex-col gap-2'>
+                <Show when={selectedVideos().size > 0}>
+                  <div class='flex items-center justify-between mb-2 p-2 bg-accent/50 rounded-lg shrink-0'>
+                    <span class='text-sm font-medium'>
+                      {selectedVideos().size} video{selectedVideos().size !== 1 ? 's' : ''} selected
+                    </span>
+                    <div class='flex gap-2'>
+                      <Button
+                        onClick={async () => {
+                          setSelectedVideos(new Set<number>())
+                          await clearHighlights()
+                        }}
+                        size='sm'
+                        variant='ghost'
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        onClick={downloadSelectedVideos}
+                        size='sm'
+                        variant='default'
+                      >
+                        Download Selected
+                      </Button>
+                    </div>
+                  </div>
+                </Show>
                 <div class='flex flex-col gap-2 pr-2'>
                   <For each={videos()}>
                     {(video) => (
@@ -386,11 +392,11 @@ export default function App() {
                     )}
                   </For>
                 </div>
-              </ScrollArea>
-            </div>
-          </Show>
-        </div>
-      </section>
+              </div>
+            </Show>
+          </div>
+        </section>
+      </ScrollArea>
     </main>
   )
 }

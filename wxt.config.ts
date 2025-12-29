@@ -21,7 +21,12 @@ export default defineConfig({
 			process.env.NODE_ENV === 'development'
 				? 'Sora Better Dev'
 				: 'Sora Better',
-		permissions: ['tabs', 'storage'],
+		permissions: ['tabs', 'storage', 'activeTab', 'background'],
+		version: '1.0.0',
+		description:
+			'Enhance your Sora experience with video optimization and watermark removal.',
+		action: {},
+		minimum_chrome_version: '114',
 		host_permissions: ['https://api.kie.ai/*'],
 	},
 	srcDir: 'src',
