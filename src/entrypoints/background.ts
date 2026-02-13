@@ -11,6 +11,12 @@ export default defineBackground(() => {
 	})
 
 	/**
+	 * Disable the popup so action.onClicked fires instead.
+	 * When default_popup is set in the manifest, onClicked never fires.
+	 */
+	// browser.action.setPopup({ popup: '' })
+
+	/**
 	 * Handle messages from content scripts and other extension contexts
 	 */
 	browser.runtime.onMessage.addListener(
@@ -36,7 +42,9 @@ export default defineBackground(() => {
 
 		try {
 			// Send message to content script to open the sheet
-			await browser.tabs.sendMessage(tab.id, { type: 'OPEN_SHEET' } satisfies FixVideosMessage)
+			await browser.tabs.sendMessage(tab.id, {
+				type: 'OPEN_SHEET',
+			} satisfies FixVideosMessage)
 		} catch (error) {
 			console.error('Failed to open sheet:', error)
 			// If content script isn't loaded, try to inject it

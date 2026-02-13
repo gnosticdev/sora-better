@@ -74,14 +74,26 @@ const sheetVariants = cva(
 )
 
 type DialogContentProps<T extends ValidComponent = 'div'> = SheetPrimitive.DialogContentProps<T> &
-  VariantProps<typeof sheetVariants> & { class?: string | undefined; children?: JSX.Element }
+  VariantProps<typeof sheetVariants> & {
+    class?: string | undefined
+    children?: JSX.Element
+    anchor: SheetPrimitive.DialogPortalProps['mount']
+  }
 
 const SheetContent = <T extends ValidComponent = 'div'>(
   props: PolymorphicProps<T, DialogContentProps<T>>,
 ) => {
-  const [local, others] = splitProps(props as DialogContentProps, ['position', 'class', 'children'])
+  const [local, others] = splitProps(props as DialogContentProps, [
+    'position',
+    'class',
+    'children',
+    'anchor',
+  ])
   return (
-    <SheetPortal position={local.position}>
+    <SheetPortal
+      position={local.position}
+      mount={local.anchor}
+    >
       <SheetOverlay />
       <SheetPrimitive.Content
         class={cn(

@@ -4,11 +4,14 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import App from '@/entrypoints/popup/App'
 import type { FixVideosMessage } from '@/lib/messages'
 
+type SheetAppProps = {
+  anchor: HTMLElement
+}
 /**
  * SheetApp component that wraps the App in a Sheet overlay
  * Listens for messages to open/close the sheet
  */
-export default function SheetApp() {
+export default function SheetApp(props: SheetAppProps) {
   const [isOpen, setIsOpen] = createSignal(false)
 
   /**
@@ -48,6 +51,7 @@ export default function SheetApp() {
       <SheetContent
         position='right'
         class='w-full sm:max-w-lg'
+        anchor={props.anchor}
       >
         <App />
       </SheetContent>
