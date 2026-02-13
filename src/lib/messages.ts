@@ -26,3 +26,4 @@ export type FixVideosMessage =
 	| { type: 'GET_FLAGS' }
 	| { type: 'OPEN_SHEET' }
 	| { type: 'CLOSE_SHEET' }
+	| { type: 'GET_VIDEO_URL_FROM_ANCHOR'; videoIndex: number }

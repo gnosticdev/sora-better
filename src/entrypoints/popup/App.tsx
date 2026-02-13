@@ -3,6 +3,7 @@ import { Flag } from '@/components/flag'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { VideoItem } from '@/components/video-item'
+import type { FixVideosMessage, VideoDetails } from '@/lib/messages'
 import type { VideoFlags } from '@/lib/shared'
 import {
   defaultFlags,
@@ -11,7 +12,11 @@ import {
   setApiKey,
   toggleFlag as toggleFlagStorage,
 } from '@/storage'
-import type { FixVideosMessage, VideoDetails } from '@/lib/messages'
+
+/**
+ * To remove a watermark, the video must be public. this is the prefix for public videos.
+ */
+const REQUIRED_PUBLIC_VIDEO_PATH_PREFIX = '/p/s_'
 
 export default function App() {
   const [flags, { refetch }] = createResource<VideoFlags>(getFlags, {
@@ -98,6 +103,25 @@ export default function App() {
     await browser.tabs
       .sendMessage(tab.id, { type: 'HIGHLIGHT_VIDEOS', indices } satisfies FixVideosMessage)
       .catch(() => null)
+  }
+
+  // get the video download url by retrieving the <a> tag that surrounds the video. This only works when on the '/profile' or '/drafts' page.
+  const getVideoDownloadUrl = async (video: VideoDetails) => {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+    if (!tab?.id) return null
+
+    const res = await browser.tabs
+      .sendMessage(tab.id, {
+        type: 'GET_VIDEO_URL_FROM_ANCHOR',
+        videoIndex: video.index,
+      } satisfies FixVideosMessage)
+      .catch(() => null)
+
+    if (res && 'url' in res && res.url) {
+      return res.url as string
+    }
+
+    return null
   }
 
   /**
@@ -201,7 +225,7 @@ export default function App() {
   const removeWatermark = async (video: VideoDetails) => {
     const key = apiKey()
     if (!key) {
-      alert('Please set your API key in settings first.')
+      alert('Please set your Kie.ai API key in settings first.\n\nhttps://kie.ai/api-key')
       setShowApiKeySettings(true)
       return
     }
@@ -213,7 +237,35 @@ export default function App() {
       return
     }
 
+    let videoDownloadUrl: string | null = tab.url
+
+    if (tab.url.endsWith('/profile') || tab.url.endsWith('/drafts')) {
+      videoDownloadUrl = await getVideoDownloadUrl(video)
+    }
+
+    if (!videoDownloadUrl) {
+      alert(
+        'Could not get video download URL.\n\nMake sure you create a sharable link first so the video is public.',
+      )
+      return
+    }
+
+    // Validate that the URL is a valid Sora public video URL
+    const urlObj = new URL(videoDownloadUrl)
+    if (!urlObj.pathname.startsWith(REQUIRED_PUBLIC_VIDEO_PATH_PREFIX)) {
+      alert(
+        `Invalid Sora video URL. The URL must start with '${REQUIRED_PUBLIC_VIDEO_PATH_PREFIX}'.\n\nMake sure you create a sharable link first so the video is public.`,
+      )
+      return
+    }
+
+    const confirmed = prompt('Download URL:', videoDownloadUrl)
+    if (!confirmed) {
+      return
+    }
+
     setRemovingWatermark(video.index)
+
     try {
       const response = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
         method: 'POST',
@@ -225,7 +277,7 @@ export default function App() {
           model: 'sora-watermark-remover',
           callBackUrl: '', // Empty callback URL as per your example
           input: {
-            video_url: tab.url,
+            video_url: videoDownloadUrl,
           },
         }),
       })

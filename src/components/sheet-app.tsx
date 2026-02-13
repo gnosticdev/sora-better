@@ -1,4 +1,5 @@
-import { createSignal, onMount, onCleanup } from 'solid-js'
+import { createSignal, onCleanup, onMount } from 'solid-js'
+import { browser } from '#imports'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import App from '@/entrypoints/popup/App'
 import type { FixVideosMessage } from '@/lib/messages'
@@ -16,8 +17,9 @@ export default function SheetApp() {
   onMount(() => {
     const messageListener = (
       msg: FixVideosMessage,
-      _sender: browser.runtime.MessageSender,
-      sendResponse: browser.runtime.SendResponse,
+      _sender: Browser.runtime.MessageSender,
+      // biome-ignore lint/suspicious/noExplicitAny: need
+      sendResponse: (response: any) => void,
     ) => {
       if (msg?.type === 'OPEN_SHEET') {
         setIsOpen(true)
@@ -39,8 +41,14 @@ export default function SheetApp() {
   })
 
   return (
-    <Sheet open={isOpen()} onOpenChange={setIsOpen}>
-      <SheetContent position="right" class="w-full sm:max-w-lg">
+    <Sheet
+      open={isOpen()}
+      onOpenChange={setIsOpen}
+    >
+      <SheetContent
+        position='right'
+        class='w-full sm:max-w-lg'
+      >
         <App />
       </SheetContent>
     </Sheet>

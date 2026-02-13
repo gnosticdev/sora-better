@@ -31,7 +31,7 @@ export const VideoItem: Component<VideoItemProps> = (props) => {
   const getVideoInfo = () => {
     const dimensions =
       props.video.width && props.video.height
-        ? `${props.video.width}×${props.video.height}`
+        ? `${props.video.width}x${props.video.height}`
         : 'Unknown size'
     const duration = formatDuration(props.video.duration)
     return `${dimensions} • ${duration}`

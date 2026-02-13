@@ -215,6 +215,45 @@ function highlightVideos(indices: number[]) {
 }
 
 /**
+ * Get the video download URL from the <a> tag surrounding the video
+ * This is needed for getting the public Sora video URL from profile/drafts pages
+ */
+function getVideoUrlFromAnchor(videoIndex: number): { url: string | null } {
+	const vids = Array.from(document.querySelectorAll('video'))
+	if (videoIndex < 0 || videoIndex >= vids.length) {
+		return { url: null }
+	}
+
+	const video = vids[videoIndex]
+
+	// Look for the closest <a> tag ancestor
+	let element: HTMLElement | null = video
+	while (element) {
+		if (element.tagName.toLowerCase() === 'a') {
+			const anchor = element as HTMLAnchorElement
+			// Check if the href matches the required pattern /p/s_
+			if (anchor.pathname && anchor.pathname.startsWith('/p/s_')) {
+				return { url: `https://sora.chatgpt.com${anchor.pathname}` }
+			}
+			// If it's an <a> tag but doesn't match, keep looking up
+		}
+		element = element.parentElement
+	}
+
+	// If no valid anchor found by traversing up, look for any <a> that contains this video
+	const allAnchors = document.querySelectorAll('a')
+	for (const anchor of allAnchors) {
+		if (anchor.contains(video)) {
+			if (anchor.pathname && anchor.pathname.startsWith('/p/s_')) {
+				return { url: `https://sora.chatgpt.com${anchor.pathname}` }
+			}
+		}
+	}
+
+	return { url: null }
+}
+
+/**
  * Clear all video highlights from the page
  */
 function clearHighlights() {
@@ -253,6 +292,8 @@ export default defineContentScript({
 				} else if (msg?.type === 'CLEAR_HIGHLIGHTS') {
 					clearHighlights()
 					sendResponse({ success: true })
+				} else if (msg?.type === 'GET_VIDEO_URL_FROM_ANCHOR') {
+					sendResponse(getVideoUrlFromAnchor(msg.videoIndex))
 				}
 				// OPEN_SHEET and CLOSE_SHEET are handled by content-sheet.tsx
 			},
